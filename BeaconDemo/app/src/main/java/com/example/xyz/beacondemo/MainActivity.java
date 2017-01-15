@@ -10,13 +10,18 @@ import android.os.RemoteException;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.TextView;
 import android.widget.Toast;
 
+import org.altbeacon.beacon.Beacon;
 import org.altbeacon.beacon.BeaconConsumer;
 import org.altbeacon.beacon.BeaconManager;
 import org.altbeacon.beacon.BeaconParser;
 import org.altbeacon.beacon.MonitorNotifier;
+import org.altbeacon.beacon.RangeNotifier;
 import org.altbeacon.beacon.Region;
+
+import java.util.Collection;
 
 public class MainActivity extends AppCompatActivity implements BeaconConsumer{
 
@@ -25,10 +30,16 @@ public class MainActivity extends AppCompatActivity implements BeaconConsumer{
 
     private BeaconManager beaconManager;
 
+    TextView holder;
+
+    Beacon firstBeacon;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        holder = (TextView) findViewById(R.id.initialText);
 
         verifyBluetooth();
 
@@ -94,17 +105,54 @@ public class MainActivity extends AppCompatActivity implements BeaconConsumer{
             @Override
             public void didEnterRegion(Region region) {
                 Toast.makeText(MainActivity.this, "Detected beacon", Toast.LENGTH_SHORT).show();
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        holder.append("\nDetected beacon");
+                    }
+                });
             }
 
             @Override
             public void didExitRegion(Region region) {
                 Toast.makeText(MainActivity.this, "Exited region", Toast.LENGTH_SHORT).show();
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        holder.append("\nExited region");
+                    }
+                });
             }
 
             @Override
-            public void didDetermineStateForRegion(int i, Region region) {
+            public void didDetermineStateForRegion(final int i, final Region region) {
                 Toast.makeText(MainActivity.this, "Switched to state : " + i + " in region : " + region, Toast.LENGTH_SHORT).show();
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        holder.append("\nSwitched to state : " + i + " in region : " + region);
+                    }
+                });
             }
+        });
+
+        beaconManager.setRangeNotifier(new RangeNotifier() {
+            @Override
+            public void didRangeBeaconsInRegion(Collection<Beacon> beacons, Region region) {
+                if (beacons.size() > 0) {
+                    firstBeacon = beacons.iterator().next();
+                    /*runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            holder.append("\nThe first beacon " + firstBeacon.toString() + " is about " + firstBeacon.getDistance() + " meters away.");
+                            holder.append("\n\nIdentifiers : " + firstBeacon.getIdentifiers());
+                        }
+                    });*/
+                    holder.append("\nThe first beacon " + firstBeacon.toString() + " is about " + firstBeacon.getDistance() + " meters away.");
+                    holder.append("\n\nIdentifiers : " + firstBeacon.getIdentifiers());
+                }
+            }
+
         });
 
         try {
